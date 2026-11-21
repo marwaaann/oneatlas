@@ -90,7 +90,7 @@ The composite score is the mean of a model's benchmark scores, each normalized t
 
 ### API
 
-Every endpoint returns JSON. Errors share one envelope: `{ "error": { "code", "message", "details?" } }` with codes `VALIDATION_ERROR` 400, `UNAUTHORIZED` 401, `NOT_FOUND` 404 and `INTERNAL_ERROR` 500. Read endpoints send `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`.
+Every endpoint returns JSON. Errors share one envelope: `{ "error": { "code", "message", "details?" } }` with codes `VALIDATION_ERROR` 400, `UNAUTHORIZED` 401, `NOT_FOUND` 404 and `INTERNAL_ERROR` 500. Read endpoints send `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`. On Vercel the CDN consumes `s-maxage` (visible as `X-Vercel-Cache: HIT` and a rising `Age`), so clients see the edge-cached response rather than the header.
 
 | Method | Endpoint | Notes |
 | --- | --- | --- |

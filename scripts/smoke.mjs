@@ -259,11 +259,14 @@ await check("GET /api/search?q=llama → models > 0", async () => {
 });
 await check("GET /api/search (no q) → 400", () => api("/api/search", 400).then(() => ""));
 
-await check("GET /api/labs → Cache-Control has s-maxage", async () => {
+await check("GET /api/labs → Cache-Control has s-maxage (or Vercel CDN-cached)", async () => {
   const r = await request("/api/labs");
   const cc = r.headers.get("cache-control") || "";
-  assert(cc.includes("s-maxage"), `cache-control "${cc}"`);
-  return cc;
+  const edge = (r.headers.get("x-vercel-cache") || "").toUpperCase();
+  // Vercel's CDN consumes s-maxage itself and strips it from the client response, so accept its cache header instead.
+  const cdnCached = ["HIT", "MISS", "STALE", "PRERENDER"].includes(edge);
+  assert(cc.includes("s-maxage") || cdnCached, `cache-control "${cc}", x-vercel-cache "${edge || "absent"}"`);
+  return cc.includes("s-maxage") ? cc : `x-vercel-cache ${edge} (cache-control "${cc}")`;
 });
 
 await check("POST /api/ingest without token → 401", async () => {
