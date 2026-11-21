@@ -1,0 +1,182 @@
+// OneAtlas data model
+//
+//  Lab (who builds a model) 1──* Model *──* Provider (who serves it)
+//                                  │            via ModelEndpoint (per-provider price/limits/perf)
+//                                  └──* BenchmarkScore *──1 Benchmark
+//
+// Prices are stored normalized as USD per 1M tokens (Decimal, never float).
+// Model.minInputPrice / minOutputPrice / atlasScore are denormalized from
+// ModelEndpoint / BenchmarkScore so listing pages can sort and filter by
+// "cheapest available price" and composite score with plain indexes.
+
+generator client {
+  provider   = "prisma-client-js"
+  // Rust-free client: queries are compiled in TS/wasm and sent through the
+  // `pg` driver adapter. No native query engine → smaller serverless bundles.
+  engineType = "client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum LabType {
+  COMPANY
+  RESEARCH_LAB
+  OPEN_SOURCE_COLLECTIVE
+}
+
+enum ProviderType {
+  FIRST_PARTY // the lab's own API
+  CLOUD // hyperscaler platforms (Bedrock, Vertex, Azure)
+  INFERENCE // specialised inference hosts (Groq, Together, Fireworks…)
+}
+
+enum ModelType {
+  CHAT
+  REASONING
+  CODE
+  EMBEDDING
+}
+
+enum Modality {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  FILE
+}
+
+enum Capability {
+  FUNCTION_CALLING
+  STRUCTURED_OUTPUT
+  VISION
+  REASONING
+  STREAMING
+  FINE_TUNING
+  WEB_SEARCH
+  PROMPT_CACHING
+  BATCH
+}
+
+enum BenchmarkCategory {
+  KNOWLEDGE
+  REASONING
+  CODING
+  MATH
+  MULTIMODAL
+  AGENTIC
+}
+
+model Lab {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  type         LabType
+  description  String
+  website      String
+  headquarters String
+  foundedYear  Int
+  accentColor  String // hex; used for avatar chips in the UI
+  models       Model[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Provider {
+  id          String          @id @default(cuid())
+  slug        String          @unique
+  name        String
+  type        ProviderType
+  description String
+  website     String
+  accentColor String
+  endpoints   ModelEndpoint[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Model {
+  id               String       @id @default(cuid())
+  slug             String       @unique
+  name             String
+  description      String
+  type             ModelType
+  releaseDate      DateTime
+  contextWindow    Int // tokens
+  maxOutputTokens  Int?
+  parameterCount   String? // e.g. "70B", "671B (37B active)"; null when undisclosed
+  openWeights      Boolean      @default(false)
+  license          String?
+  knowledgeCutoff  String?
+  inputModalities  Modality[]
+  outputModalities Modality[]
+  capabilities     Capability[]
+
+  // Denormalized from endpoints (see src/lib/services/pricing.ts)
+  minInputPrice  Decimal? @db.Decimal(12, 4)
+  minOutputPrice Decimal? @db.Decimal(12, 4)
+  providerCount  Int      @default(0)
+  // Composite "Atlas Index": mean normalized benchmark score (≥3 benchmarks)
+  atlasScore     Float?
+
+  labId     String
+  lab       Lab              @relation(fields: [labId], references: [id], onDelete: Restrict)
+  endpoints ModelEndpoint[]
+  scores    BenchmarkScore[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([labId])
+  @@index([type])
+  @@index([releaseDate])
+  @@index([contextWindow])
+  @@index([minInputPrice])
+  @@index([atlasScore])
+}
+
+model ModelEndpoint {
+  id               String   @id @default(cuid())
+  modelId          String
+  providerId       String
+  inputPrice       Decimal  @db.Decimal(12, 4) // USD / 1M tokens
+  outputPrice      Decimal  @db.Decimal(12, 4) // USD / 1M tokens
+  cachedInputPrice Decimal? @db.Decimal(12, 4)
+  contextWindow    Int
+  maxOutputTokens  Int?
+  throughputTps    Int? // median output tokens/sec
+  latencyMs        Int? // median time-to-first-token
+  uptimePct        Float?
+  model            Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  provider         Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  updatedAt        DateTime @updatedAt
+
+  @@unique([modelId, providerId])
+  @@index([providerId])
+}
+
+model Benchmark {
+  id             String            @id @default(cuid())
+  slug           String            @unique
+  name           String
+  category       BenchmarkCategory
+  description    String
+  url            String?
+  higherIsBetter Boolean           @default(true)
+  maxScore       Float             @default(100)
+  scores         BenchmarkScore[]
+}
+
+model BenchmarkScore {
+  id          String    @id @default(cuid())
+  modelId     String
+  benchmarkId String
+  score       Float
+  model       Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  benchmark   Benchmark @relation(fields: [benchmarkId], references: [id], onDelete: Cascade)
+
+  @@unique([modelId, benchmarkId])
+  @@index([benchmarkId, score])
+}
