@@ -4,7 +4,7 @@ OneAtlas helps developers, AI engineers and researchers **discover, compare and 
 
 > **Role:** Full Stack Engineer · **Stack:** Next.js 15 (App Router) · React 19 · TypeScript · TailwindCSS 4 · PostgreSQL · Prisma 6 · Zod
 >
-> **Live:** `<your-vercel-url>` · **Loom:** `<your-loom-url>`
+> **Live:** https://oneatlas-beryl.vercel.app · **Loom:** `<your-loom-url>`
 
 ---
 
