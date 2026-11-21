@@ -1,7 +1,7 @@
 # Loom walkthrough (target: ~8 minutes)
 
 **0:00 Intro (30s)**
-"I'm Rishabh. I applied for the Full Stack role and built OneAtlas end to end: Next.js, Prisma, Postgres on Neon, deployed on Vercel. I'll demo the product first, then walk through the architecture and decisions."
+"I'm Marwan Shafi. I applied for the Full Stack role and built OneAtlas end to end: Next.js, Prisma, Postgres on Neon, deployed on Vercel. I'll demo the product first, then walk through the architecture and decisions."
 
 **0:30 Product demo (3 min)**
 1. Home: stats, top by Atlas Index, best value, latest releases.

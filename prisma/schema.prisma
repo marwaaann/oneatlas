@@ -115,7 +115,7 @@ model Model {
   outputModalities Modality[]
   capabilities     Capability[]
 
-  // Denormalized from endpoints (see src/lib/services/pricing.ts)
+  // Denormalized from endpoints (see src/lib/services/aggregates.ts)
   minInputPrice  Decimal? @db.Decimal(12, 4)
   minOutputPrice Decimal? @db.Decimal(12, 4)
   providerCount  Int      @default(0)
